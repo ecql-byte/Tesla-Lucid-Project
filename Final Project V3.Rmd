@@ -1,0 +1,296 @@
+---
+title: "QBS 181 Final Project"
+author: "Chichi Illoh"
+date: "2023-11-05"
+output: pdf_document
+---
+```{r}
+
+library(tidyr)
+library(dplyr)
+library(magrittr)
+library(ggplot2)
+library(lubridate)
+library(zoo)
+```
+
+
+```{r}
+tesla_deaths = read.csv("/Users/Student/Desktop/QBS 181 Final Project/CleanTesla_Deaths  (1).csv")
+tesla_stock = read.csv("/Users/Student/Desktop/QBS 181 Final Project/tesla_stock.csv")
+lucid_stock = read.csv("/Users/Student/Desktop/QBS 181 Final Project/Lucid_stock.csv")
+head(tesla_deaths)
+head(tesla_stock)
+head(lucid_stock)
+```
+# Tesla Stock Dataset Cleaning
+```{r}
+# Remove the $ in the dataset
+tesla_stock$Close.Last <- gsub("\\$", "", tesla_stock$Close.Last)
+tesla_stock$Open <- gsub("\\$", "", tesla_stock$Open)
+tesla_stock$High <- gsub("\\$", "", tesla_stock$High)
+tesla_stock$Low <- gsub("\\$", "", tesla_stock$Low)
+tesla_stock$Close <- tesla_stock$Close.Last
+tesla_stock$Close.Last <- NULL
+```
+
+
+```{r}
+# make prices for Tesla numeric
+tesla_stock$Open = as.numeric(tesla_stock$Open)
+tesla_stock$High = as.numeric(tesla_stock$High)
+tesla_stock$Low = as.numeric(tesla_stock$Low)
+tesla_stock$Close = as.numeric(tesla_stock$Close)
+```
+
+# Tesla Stock Dataset Cleaning
+```{r}
+# Remove the $ in the dataset
+lucid_stock$Close.Last <- gsub("\\$", "", lucid_stock$Close.Last)
+lucid_stock$Open <- gsub("\\$", "", lucid_stock$Open)
+lucid_stock$High <- gsub("\\$", "", lucid_stock$High)
+lucid_stock$Low <- gsub("\\$", "", lucid_stock$Low)
+lucid_stock$Close <- lucid_stock$Close.Last
+lucid_stock$Close.Last <- NULL
+```
+
+
+```{r}
+# make prices for Lucid numeric
+lucid_stock$Open = as.numeric(lucid_stock$Open)
+lucid_stock$High = as.numeric(lucid_stock$High)
+lucid_stock$Low = as.numeric(lucid_stock$Low)
+lucid_stock$Close = as.numeric(lucid_stock$Close)
+
+```
+## TidyR: Combining Tesla Stock and Fatal Tesla Car Accidents 
+
+```{r}
+tslastock_deaths =tesla_stock %>%
+  #select(-origin, -dest) %>% 
+  left_join(tesla_deaths, by = "Date")
+```
+
+## TidyR: Combining Tesla Stock,Lucid stock, and Fatal Tesla Car Accidents 
+
+```{r}
+
+combined_stocks_death = tslastock_deaths %>%
+  inner_join(lucid_stock, by = "Date")
+  
+```
+
+In Excel NAs are put in as "#N/A". In R this becomes a string and so, each "#N/A" value needs to be converted to a real NA value in R. 
+```{r}
+na.strings<-c("","#N/A") #set #N/A to be NAs
+na_ix<-Reduce("|",lapply(na.strings,"==",combined_stocks_death)) #find the NAs
+is.na(combined_stocks_death)<-na_ix #set NAs to the right places
+```
+
+Columns are renamed so that Tesla stock and Lucid stock info are differentiated.
+```{r}
+combined_stocks_death = combined_stocks_death %>% 
+  rename("Tesla_Close" = Close.x) %>% 
+  rename("Tesla_Volume" = Volume.x) %>%
+  rename("Tesla_Open" = Open.x) %>% 
+  rename("Tesla_High" = High.x) %>%
+  rename("Tesla_Low" = Low.x) %>%
+  rename("Lucid_Close" = Close.y) %>% 
+  rename("Lucid_Volume" = Volume.y) %>%
+  rename("Lucid_Open" = Open.y) %>% 
+  rename("Lucid_High" = High.y) %>%
+  rename("Lucid_Low" = Low.y) 
+```
+
+Convert the Dates in the dataset into a Date object
+```{r}
+combined_stocks_death = combined_stocks_death%>%
+  mutate(Date = mdy(Date))
+```
+
+
+## TidyR: Combining Tesla & Lucid Stock 
+
+Convert the Dates in the dataset into a Date object
+```{r}
+tesla_stock = tesla_stock%>%
+  mutate(Date = mdy(Date))
+```
+
+Once again, convert the Dates in the dataset into a Date object
+```{r}
+lucid_stock = lucid_stock%>%
+  mutate(Date = mdy(Date))
+```
+
+```{r}
+combine_stocks <- tesla_stock%>%
+  left_join(lucid_stock, by = "Date")
+```
+
+
+Columns are renamed so that Tesla stock and Lucid stock info are differentiated.
+```{r}
+library(dplyr)
+combine_stocks = combine_stocks %>% 
+  rename("Tesla_Close" = Close.x) %>% 
+  rename("Tesla_Volume" = Volume.x) %>%
+  rename("Tesla_Open" = Open.x) %>% 
+  rename("Tesla_High" = High.x) %>%
+  rename("Tesla_Low" = Low.x) %>%
+  rename("Lucid_Close" = Close.y) %>% 
+  rename("Lucid_Volume" = Volume.y) %>%
+  rename("Lucid_Open" = Open.y) %>% 
+  rename("Lucid_High" = High.y) %>%
+  rename("Lucid_Low" = Low.y) 
+```
+
+
+Create csv files of the combined datasets
+```{r}
+write.csv(combined_stocks_death,file='/Users/Student/Desktop/QBS 181 Final Project/combined_stocks_death.csv')
+```
+
+```{r}
+write.csv(tslastock_deaths,file='/Users/Student/Desktop/QBS 181 Final Project/tslastock_deaths.csv')
+```
+
+```{r}
+#write.csv(combine_stocks,file='/Users/admin/new_file.csv')
+write.csv(combine_stocks,file='/Users/Student/Desktop/QBS 181 Final Project/combine_stocks.csv')
+```
+
+
+
+
+
+
+
+## Exploratory analysis of the data
+
+
+```{r}
+dim(tslastock_deaths)
+```
+
+```{r}
+library(DataExplorer)
+introduce(tslastock_deaths)
+```
+
+```{r}
+na.strings<-c("","#N/A") #set #N/A to be NAs
+na_ix<-Reduce("|",lapply(na.strings,"==",tslastock_deaths)) #find the NAs
+is.na(tslastock_deaths)<-na_ix #set NAs to the right places
+```
+
+
+Now lets run again:
+
+```{r}
+introduce(tslastock_deaths)
+```
+
+
+
+# Line plot of Tesla Highs in stock
+```{r}
+ggplot(data=combine_stocks, aes(x=combine_stocks$Date, y=combine_stocks$Tesla_High, group=1)) +
+  geom_line()
+```
+
+```{r}
+# make prices for TEsla numeric in combined stock
+
+combine_stocks$Tesla_Open = as.numeric(combine_stocks$Tesla_Open)
+combine_stocks$Tesla_High = as.numeric(combine_stocks$Tesla_High)
+combine_stocks$Tesla_Low = as.numeric(combine_stocks$Tesla_Low)
+combine_stocks$Tesla_Close = as.numeric(combine_stocks$Tesla_Close)
+```
+
+
+```{r}
+summary(tslastock_deaths)
+```
+
+# Visual Exploratory Analysis
+```{r}
+# for combined stocks
+plot(combine_stocks)
+```
+
+```{r}
+# for tslastock_deaths
+plot(tslastock_deaths)
+```
+
+
+# Histograms
+
+```{r}
+library(ggplot2)
+ggplot(combine_stocks,aes(x=`Tesla_Volume`))+ 
+  geom_histogram(bins=20,colour="black",fill="#CA3C25")+
+  labs(x="Volume of Tesla stock in a Day", y = "Frequency") #another layer!
+
+```
+
+```{r}
+ggplot(combine_stocks,aes(x=`Lucid_Volume`))+ 
+  geom_histogram(bins=20,colour="black",fill="#6B717E")+
+  labs(x="Volume of Lucid stock in a Day", y = "Frequency") #another layer!
+
+```
+
+
+```{r}
+ggplot(combine_stocks,aes(x=`Tesla_High`))+ 
+  geom_histogram(bins=20,colour="black",fill="#CA3C25")+
+  labs(x="Tesla Highest Stock Price in a Day", y = "Frequency") #another layer!
+
+```
+
+
+```{r}
+ggplot(combine_stocks,aes(x=`Lucid_High`))+ 
+  geom_histogram(bins=20,colour="black",fill="#CA3C25")+
+  labs(x="Lucid Highest Stock Price in a Day", y = "Frequency") #another layer!
+
+```
+
+```{r}
+ggplot(tslastock_deaths,aes(x=`Deaths`))+ 
+  geom_histogram(bins=20,colour="black",fill="#CA3C25")+
+  labs(x="Distribution of Deaths in a Car Accidents", y = "Frequency") #another layer!
+
+```
+
+```{r}
+ggplot(tslastock_deaths,aes(x=`State`, y=`Deaths`))+ 
+  geom_boxplot()+
+  labs(x="States", y = "Deaths")
+
+```
+
+
+```{r}
+ggplot(tslastock_deaths,aes(x=`Open`, y=`Deaths`))+ 
+  geom_point()+
+  labs(x="Open", y = "Deaths")
+
+```
+
+
+```{r}
+ggplot(tslastock_deaths,aes(x=`Autopilot.claimed`, y=`Deaths`))+ 
+  geom_boxplot()+
+  labs(x="Open", y = "Deaths")
+
+```
+
+```{r}
+ggplot(data=subset(tslastock_deaths, !is.na(Model)),aes(x=`Model`, y=`Deaths`))+ 
+  geom_bar(stat = "identity", fill = "#CA3C25")+
+  labs(x="Tesla Models", y = "Fatal Tesla Accidents")
+
+```

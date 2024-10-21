@@ -1,0 +1,162 @@
+---
+title: "181 Final Project"
+author: "Elizabeth Chin"
+date: "2023-11-05"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Library Packages
+
+```{r}
+library(tidyr)
+library(dplyr)
+library(magrittr)
+library(ggplot2)
+library(lubridate)
+library(zoo)
+```
+
+## Load Data Set
+
+```{r cars}
+# Set working directory
+setwd("/Users/li_li/desktop/QBS_181_Data")
+
+# remote tesla & lucid data set
+tesla <- read.csv("tesla_stock.csv")
+lucid <- read.csv("lucid_stock.csv")
+```
+
+## TidyR: Combining Tesla & Lucid Stock 
+
+```{r}
+combine_stocks <- tesla %>%
+  left_join(lucid, by = "Date")
+```
+
+## TidyR: Rename Columns 
+
+```{r}
+combine_stocks %<>% 
+  rename("Tesla_Close" = Close.Last.x) %>% 
+  rename("Tesla_Volume" = Volume.x) %>%
+  rename("Tesla_Open" = Open.x) %>% 
+  rename("Tesla_High" = High.x) %>%
+  rename("Tesla_Low" = Low.x) %>%
+  rename("Lucid_Close" = Close.Last.y) %>% 
+  rename("Lucid_Volume" = Volume.y) %>%
+  rename("Lucid_Open" = Open.y) %>% 
+  rename("Lucid_High" = High.y) %>%
+  rename("Lucid_Low" = Low.y) 
+```
+
+## TidyR: Removing NA's
+
+```{r}
+combine_stocks %<>% 
+  na.omit()
+```
+
+## Export DataFrame to CSV file
+```{r}
+#write.csv(combine_stocks,file='/Users/admin/new_file.csv')
+write.csv(combine_stocks,file='/Users/li_li/desktop/QBS_181_Data/combine_stocks.csv')
+```
+
+## Tidy R: Transform Data
+
+```{r}
+# Clean and transform the data
+clean_combine_stocks <- combine_stocks %>%
+  mutate(Date = mdy(Date),
+         Tesla_Close = as.numeric(gsub("\\$", "", Tesla_Close)),
+         Tesla_Open = as.numeric(gsub("\\$", "", Tesla_Open)),
+         Tesla_High = as.numeric(gsub("\\$", "", Tesla_High)),
+         Tesla_Low = as.numeric(gsub("\\$", "", Tesla_Low)),
+         Lucid_Close = as.numeric(gsub("\\$", "", Lucid_Close)),
+         Lucid_Open = as.numeric(gsub("\\$", "", Lucid_Open)),
+         Lucid_High = as.numeric(gsub("\\$", "", Lucid_High)),
+         Lucid_Low = as.numeric(gsub("\\$", "", Lucid_Low)))
+
+```
+
+## Calculating daily returns or moving averages
+
+```{r}
+# Calculate daily returns
+#clean_combine_stocks2 <- clean_combine_stocks %>%
+#  arrange(Date) %>%
+#  mutate(Tesla_Daily_Return = (Tesla_Close / lag(Tesla_Close) - 1) * 100,
+#         Lucid_Daily_Return = (Lucid_Close / lag(Lucid_Close) - 1) * 100)
+```
+
+```{r}
+# Calculate daily returns
+clean_combine_stocks %<>%
+  arrange(Date) %>%
+  mutate(Tesla_Daily_Return = (Tesla_Close / lag(Tesla_Close) - 1) * 100,
+         Lucid_Daily_Return = (Lucid_Close / lag(Lucid_Close) - 1) * 100)
+```
+
+
+```{r}
+# Calculate moving averages
+#clean_combine_stocks2 <- clean_combine_stocks %>%
+#  arrange(Date) %>%
+#  mutate(Tesla_MA50 = rollmean(Tesla_Close, 50, fill = NA, align='right'),
+#         Lucid_MA50 = rollmean(Lucid_Close, 50, fill = NA, align='right'))
+```
+
+
+```{r}
+# Calculate moving averages
+clean_combine_stocks %<>%
+  arrange(Date) %>%
+  mutate(Tesla_MA50 = rollmean(Tesla_Close, 50, fill = NA, align='right'),
+         Lucid_MA50 = rollmean(Lucid_Close, 50, fill = NA, align='right'))
+```
+
+## TidyR: Removing NA's
+
+```{r}
+clean_combine_stocks %<>% 
+  na.omit()
+```
+
+## GGplot2: Plotting Graphs
+
+```{r}
+# Plot closing prices
+ggplot(clean_combine_stocks, aes(x = Date)) +
+  geom_line(aes(y = Tesla_Close, colour = "Tesla")) +
+  geom_line(aes(y = Lucid_Close, colour = "Lucid")) +
+  labs(title = "Closing Prices", x = "Date", y = "Price (USD)") +
+  theme_minimal()
+
+# Plot moving averages
+ggplot(clean_combine_stocks, aes(x = Date)) +
+  geom_line(aes(y = Tesla_MA50, colour = "Tesla MA50")) +
+  geom_line(aes(y = Lucid_MA50, colour = "Lucid MA50")) +
+  labs(title = "50-Day Moving Averages", x = "Date", y = "Price (USD)") +
+  theme_minimal()
+
+```
+
+```{r}
+# Linear model for Tesla Closing Prices
+tesla_lm <- lm(Tesla_Close ~ Date, data = clean_combine_stocks)
+summary(tesla_lm)
+
+# Linear model for Lucid Closing Prices
+lucid_lm <- lm(Lucid_Close ~ Date, data = clean_combine_stocks)
+summary(lucid_lm)
+
+```
+
+
+
+
